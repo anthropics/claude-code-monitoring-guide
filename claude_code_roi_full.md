@@ -60,7 +60,8 @@ First, grab the configuration files:
 ```bash
 # Clone the configuration repo
 git clone https://github.com/katchu11/claude-code-guide
-docker-compose up -d
+cd claude-code-guide
+docker compose up -d
 ```
 
 Configure Claude Code to send metrics to Prometheus:
