@@ -1,0 +1,317 @@
+name: Claude Code
+
+on:
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+  issues:
+    types: [opened, assigned]
+  pull_request_review:
+    types: [submitted]
+  workflow_dispatch:  # Allow manual triggering for testing
+    inputs:
+      debug_mode:
+        description: 'Enable debug mode'
+        required: false
+        default: 'true'
+
+jobs:
+  claude:
+    if: |
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude')) ||
+      (github.event_name == 'issues' && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude'))) ||
+      github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      id-token: write
+      actions: read  # Added for CI/CD integration
+    env:
+      ACTIONS_STEP_DEBUG: true  # Enable debug logging
+      ACTIONS_RUNNER_DEBUG: true  # Enable runner debug logging
+    steps:
+      # Debug: Print event information
+      - name: Debug - Event Information
+        env:
+          EVENT_JSON: ${{ toJSON(github.event) }}
+        run: |
+          echo "::group::Event Information"
+          echo "Event Name: ${{ github.event_name }}"
+          echo "Event Action: ${{ github.event.action }}"
+          echo "Actor: ${{ github.actor }}"
+          echo "Repository: ${{ github.repository }}"
+          echo "Ref: ${{ github.ref }}"
+          echo "SHA: ${{ github.sha }}"
+          echo "::endgroup::"
+
+          echo "::group::Event Payload"
+          echo "$EVENT_JSON"
+          echo "::endgroup::"
+
+      # Debug: Check trigger conditions
+      - name: Debug - Check Trigger Conditions
+        env:
+          COMMENT_BODY: ${{ github.event.comment.body || '' }}
+          REVIEW_BODY: ${{ github.event.review.body || '' }}
+          ISSUE_BODY: ${{ github.event.issue.body || '' }}
+          ISSUE_TITLE: ${{ github.event.issue.title || '' }}
+        run: |
+          echo "::group::Trigger Analysis"
+          if [[ "${{ github.event_name }}" == "issue_comment" ]]; then
+            echo "Comment Body:"
+            echo "$COMMENT_BODY"
+            echo "Contains @claude: ${{ contains(github.event.comment.body, '@claude') }}"
+            echo "Is PR: ${{ github.event.issue.pull_request != null }}"
+          elif [[ "${{ github.event_name }}" == "pull_request_review_comment" ]]; then
+            echo "Review Comment Body:"
+            echo "$COMMENT_BODY"
+            echo "Contains @claude: ${{ contains(github.event.comment.body, '@claude') }}"
+          elif [[ "${{ github.event_name }}" == "pull_request_review" ]]; then
+            echo "Review Body:"
+            echo "$REVIEW_BODY"
+            echo "Contains @claude: ${{ contains(github.event.review.body, '@claude') }}"
+          elif [[ "${{ github.event_name }}" == "issues" ]]; then
+            echo "Issue Body:"
+            echo "$ISSUE_BODY"
+            echo "Issue Title:"
+            echo "$ISSUE_TITLE"
+            echo "Contains @claude in body: ${{ contains(github.event.issue.body, '@claude') }}"
+            echo "Contains @claude in title: ${{ contains(github.event.issue.title, '@claude') }}"
+          fi
+          echo "::endgroup::"
+
+      # Get PR branch info when triggered by issue_comment
+      - name: Get PR branch
+        if: github.event_name == 'issue_comment' && github.event.issue.pull_request
+        id: comment-branch
+        uses: xt0rted/pull-request-comment-branch@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Debug - Branch Information
+        run: |
+          echo "::group::Branch Information"
+          echo "Comment Branch Head Ref: ${{ steps.comment-branch.outputs.head_ref }}"
+          echo "GitHub Head Ref: ${{ github.head_ref }}"
+          echo "GitHub Ref: ${{ github.ref }}"
+          echo "Computed Ref: ${{ steps.comment-branch.outputs.head_ref || github.head_ref || github.ref }}"
+          echo "::endgroup::"
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.comment-branch.outputs.head_ref || github.head_ref || github.ref }}
+          fetch-depth: 0
+
+      - name: Debug - Repository State
+        run: |
+          echo "::group::Repository State"
+          echo "Current Branch: $(git branch --show-current)"
+          echo "Current Commit: $(git rev-parse HEAD)"
+          echo "Git Status:"
+          git status
+          echo "::endgroup::"
+
+      - name: Check API Key
+        id: check-api-key
+        run: |
+          echo "::group::API Key Check"
+          if [ -z "${{ secrets.ANTHROPIC_API_KEY }}" ]; then
+            echo "::error::ANTHROPIC_API_KEY secret is not set"
+            echo "api_key_exists=false" >> $GITHUB_OUTPUT
+            exit 1
+          else
+            echo "ANTHROPIC_API_KEY is set"
+            echo "API Key Length: ${#ANTHROPIC_API_KEY}"
+            echo "API Key starts with: ${ANTHROPIC_API_KEY:0:3}..."
+            echo "api_key_exists=true" >> $GITHUB_OUTPUT
+          fi
+          echo "::endgroup::"
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+
+      - name: Test API Key Validity
+        id: test-api
+        if: steps.check-api-key.outputs.api_key_exists == 'true'
+        run: |
+          echo "::group::API Key Validation"
+          echo "Testing API key validity..."
+
+          response=$(curl -s -w "\n%{http_code}" https://api.anthropic.com/v1/messages \
+            -H "x-api-key: ${{ secrets.ANTHROPIC_API_KEY }}" \
+            -H "anthropic-version: 2023-06-01" \
+            -H "content-type: application/json" \
+            -d '{
+              "model": "claude-3-5-haiku-20241022",
+              "max_tokens": 10,
+              "messages": [{"role": "user", "content": "test"}]
+            }')
+
+          http_code=$(echo "$response" | tail -n 1)
+          body=$(echo "$response" | sed '$d')
+
+          echo "HTTP Status Code: $http_code"
+          echo "Response Body: $body"
+
+          if [[ "$http_code" == "200" ]]; then
+            echo "✅ API Key is valid and working"
+            echo "api_key_valid=true" >> $GITHUB_OUTPUT
+          else
+            echo "❌ API Key validation failed"
+            echo "api_key_valid=false" >> $GITHUB_OUTPUT
+          fi
+          echo "::endgroup::"
+
+      - name: Debug - Environment Variables
+        run: |
+          echo "::group::Environment Variables"
+          echo "GitHub Token exists: ${{ secrets.GITHUB_TOKEN != '' }}"
+          echo "Anthropic API Key exists: ${{ secrets.ANTHROPIC_API_KEY != '' }}"
+          echo "Runner OS: ${{ runner.os }}"
+          echo "Runner Temp: ${{ runner.temp }}"
+          echo "::endgroup::"
+
+      - name: Run Claude Code (with extensive debugging)
+        id: claude
+        uses: anthropics/claude-code-action@beta
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+
+          # Optional: Specify model (defaults to Claude Sonnet 4)
+          # model: "claude-sonnet-4-20250514"  # Sonnet 4 (default)
+          # model: "claude-opus-4-20250514"    # Opus 4 (most capable)
+          # model: "claude-3-5-haiku-20241022" # Haiku 3.5 (fastest)
+
+          # Optional: Customize the trigger phrase (default: @claude)
+          # trigger_phrase: "@claude"
+
+          # Custom instructions for Claude Code Monitoring project standards
+          custom_instructions: |
+            DEBUG MODE ACTIVE
+            Please start your response with:
+            - DEBUG: Claude responding at timestamp
+            - Trigger: what triggered this response
+            - Context: PR/Issue number and type
+
+            Then proceed with normal code review following Claude Code Monitoring project standards.
+
+            You are conducting a code review for the Claude Code Monitoring Guide project.
+
+            CRITICAL: Review all relevant CLAUDE.md files for standards enforcement:
+            - /CLAUDE.md - global project rules and monitoring workflows
+            - /docs/INDEX.md - documentation hub with role-based navigation
+            - /JUSTFILE-GUIDE.md - service management and monitoring operations
+            - /METRICS-REFERENCE.md - metrics collection and analysis standards
+            - /troubleshooting.md - monitoring stack diagnostic procedures
+
+            KEY ENFORCEMENT AREAS:
+
+            🚨 CRITICAL PATTERNS TO FLAG:
+            - Missing monitoring stack validation (`just test hooks`, `just monitor validate`)
+            - Direct docker commands instead of justfile patterns
+            - Port conflicts outside 7100+ range organization
+            - Missing infrastructure health checks before commits
+            - Hardcoded credentials or missing environment variables
+            - Production safety violations in monitoring stack
+            - Broken justfile commands (IMMEDIATE PRIORITY - see CLAUDE.md)
+
+            🏗️ MONITORING INFRASTRUCTURE COMPLIANCE:
+            - Service orchestration follows docker-compose.yml patterns
+            - Hook system integration with production-tool-hook.sh
+            - Dashboard management through Grafana provisioning
+            - Metrics collection pipeline (hooks → pushgateway → prometheus → grafana)
+            - Proper 7100+ port range usage (Prometheus:7100, Pushgateway:7101, Grafana:7102)
+            - Container health checks and service dependencies
+
+            📊 METRICS & MONITORING QUALITY:
+            - Timestamp-based counter system for proper metrics accumulation
+            - Hook-based metrics collection validates properly
+            - Dashboard queries reference correct metric names and labels
+            - Monitoring stack testing procedures are documented and functional
+            - Service health validation through justfile commands
+
+            📚 DOCUMENTATION QUALITY HIGH PRIORITY:
+            - Verify documentation accuracy against actual monitoring infrastructure
+            - Flag outdated or incorrect justfile command references
+            - Ensure new features include proper monitoring documentation
+            - Check that setup/deployment docs match actual monitoring stack
+            - Validate that justfile commands referenced in docs actually exist
+            - Confirm dashboard screenshots and examples are current
+            - Ensure documentation maintains monitoring project focus
+
+            🧪 TESTING & VALIDATION:
+            - All monitoring changes include appropriate validation tests
+            - Hook system changes tested with `just test hooks`
+            - Service changes validated with `just monitor validate`
+            - Infrastructure changes tested with `just status`
+            - Dashboard changes verified in Grafana
+            - Documentation accuracy tested against real system
+
+            🔄 MONITORING WORKFLOW COMPLIANCE:
+            - Changes follow justfile-first development patterns
+            - Standard Git workflow (not GT) for version control
+            - Conventional commit messages with monitoring context
+            - Proper environment targeting through docker-compose
+            - Service health checks before and after changes
+
+            📦 HOOK & METRICS SYSTEM:
+            - production-tool-hook.sh changes maintain backwards compatibility
+            - Metric naming follows claude_custom_* patterns
+            - Pushgateway integration preserves timestamp uniqueness
+            - Dashboard queries reference correct prometheus metrics
+            - MCP server integration maintains proper categories
+
+            🔧 INFRASTRUCTURE PATTERNS:
+            - Docker services follow health check patterns
+            - Volume persistence for prometheus, grafana data
+            - Network configuration allows proper service communication  
+            - Python dependencies managed through requirements.txt
+            - Node.js dependencies managed through package.json
+
+            When reviewing, be specific about which monitoring standard is being violated and reference the relevant documentation file (CLAUDE.md, JUSTFILE-GUIDE.md, etc.). Focus on catching issues that could cause monitoring stack failures, metrics collection problems, or documentation drift.
+
+            Special attention to:
+            - Justfile command integrity (broken commands = IMMEDIATE PRIORITY)
+            - Monitoring stack health and service orchestration
+            - Hook system functionality and metrics collection
+            - Dashboard accuracy and data visualization
+            - Documentation accuracy for monitoring workflows
+
+      - name: Debug - Claude Action Output
+        if: always()
+        run: |
+          echo "::group::Claude Action Results"
+          echo "Claude step outcome: ${{ steps.claude.outcome }}"
+          echo "Claude step conclusion: ${{ steps.claude.conclusion }}"
+          if [ -n "${{ steps.claude.outputs.comment_id }}" ]; then
+            echo "Comment ID: ${{ steps.claude.outputs.comment_id }}"
+          fi
+          if [ -n "${{ steps.claude.outputs.comment_url }}" ]; then
+            echo "Comment URL: ${{ steps.claude.outputs.comment_url }}"
+          fi
+          echo "::endgroup::"
+
+      - name: Debug - Job Summary
+        if: always()
+        run: |
+          echo "## Debug Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Event Information" >> $GITHUB_STEP_SUMMARY
+          echo "- **Event**: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Actor**: ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Repository**: ${{ github.repository }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Ref**: ${{ github.ref }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### API Key Status" >> $GITHUB_STEP_SUMMARY
+          echo "- **Key Exists**: ${{ steps.check-api-key.outputs.api_key_exists }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Key Valid**: ${{ steps.test-api.outputs.api_key_valid }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Claude Action" >> $GITHUB_STEP_SUMMARY
+          echo "- **Outcome**: ${{ steps.claude.outcome }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Conclusion**: ${{ steps.claude.conclusion }}" >> $GITHUB_STEP_SUMMARY

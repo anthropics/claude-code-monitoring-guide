@@ -1,0 +1,16 @@
+{
+  "name": "claude-code-monitoring-guide",
+  "version": "1.0.0",
+  "description": "Production-grade monitoring system for Claude Code usage tracking",
+  "scripts": {
+    "setup": "npm install && pip install -r requirements.txt",
+    "sync-linear": "./scripts/linear-sync.sh",
+    "test": "echo \"No tests specified\" && exit 0"
+  },
+  "dependencies": {
+    "linearis": "github:czottmann/linearis"
+  },
+  "devDependencies": {},
+  "author": "Claude Code Monitoring Team",
+  "license": "MIT"
+}

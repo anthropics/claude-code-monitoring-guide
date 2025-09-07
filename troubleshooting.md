@@ -2,7 +2,35 @@
 
 Quick solutions for common Claude Code issues related to telemetry and ROI measurement.
 
-## Telemetry Issues
+## Quick Diagnostics (Recommended)
+
+**Use the built-in justfile commands for fast troubleshooting:**
+
+```bash
+# Check overall system health
+just status
+
+# Validate entire monitoring stack
+just monitor validate
+
+# Test hooks and data flow
+just test all
+
+# Check specific services
+just service status grafana
+just service logs prometheus
+
+# Restart problematic services  
+just service restart pushgateway
+```
+
+**Service URLs (Updated Port Configuration):**
+- **Grafana:** http://localhost:7102 (admin/admin)
+- **Prometheus:** http://localhost:7100  
+- **Pushgateway:** http://localhost:7101
+- **OTEL Collector:** http://localhost:7110-7112
+
+## Legacy Telemetry Issues
 
 ### Telemetry Not Working
 
@@ -24,7 +52,7 @@ Quick solutions for common Claude Code issues related to telemetry and ROI measu
 
 3. Check your OTLP endpoint is accessible:
    ```bash
-   curl -v http://localhost:4317
+   curl -v http://localhost:7110
    ```
 
 4. Verify all required environment variables:
@@ -149,7 +177,7 @@ npm install -g @anthropic-ai/claude-code
 
 2. Verify Prometheus can reach the OTEL collector:
    ```bash
-   curl http://localhost:8888/metrics
+   curl http://localhost:7101/metrics
    ```
 
 3. Check for firewall issues blocking port 4317
@@ -183,5 +211,5 @@ If these solutions don't resolve your issue:
 
 4. For telemetry-specific issues:
    - Review your OTEL collector logs
-   - Check Prometheus targets at http://localhost:9090/targets
+   - Check Prometheus targets at http://localhost:7100/targets
    - Verify your organization's firewall rules

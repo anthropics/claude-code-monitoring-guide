@@ -72,7 +72,7 @@ export CLAUDE_CODE_ENABLE_TELEMETRY=1
 # Configure OTLP exporter  
 export OTEL_METRICS_EXPORTER=otlp
 export OTEL_EXPORTER_OTLP_PROTOCOL=grpc
-export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317
+export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:7110
 
 # Optional: Set authentication if required
 # export OTEL_EXPORTER_OTLP_HEADERS="Authorization=Bearer your-token"
@@ -82,8 +82,8 @@ claude
 ```
 
 Common infrastructure endpoints:
-- **Local development**: `http://localhost:4317`
-- **Kubernetes**: `http://otel-collector.monitoring.svc.cluster.local:4317`
+- **Local development**: `http://localhost:7110`
+- **Kubernetes**: `http://otel-collector.monitoring.svc.cluster.local:7110`
 - **AWS**: Your Application Load Balancer endpoint
 - **DataDog**: `https://otlp.datadoghq.com`
 - **Honeycomb**: `https://api.honeycomb.io:443`
@@ -459,9 +459,9 @@ Generate a comprehensive productivity report with visualizations."
 # fetch-claude-metrics.sh - Automate report generation with live data
 
 # Fetch metrics from Prometheus
-TOTAL_COST=$(curl -s "http://localhost:9090/api/v1/query?query=sum(claude_code_cost_usage_USD_total)" | jq -r '.data.result[0].value[1] // "0"')
-INPUT_TOKENS=$(curl -s "http://localhost:9090/api/v1/query?query=sum(claude_code_token_usage_tokens_total{type=\"input\"})" | jq -r '.data.result[0].value[1] // "0"')
-OUTPUT_TOKENS=$(curl -s "http://localhost:9090/api/v1/query?query=sum(claude_code_token_usage_tokens_total{type=\"output\"})" | jq -r '.data.result[0].value[1] // "0"')
+TOTAL_COST=$(curl -s "http://localhost:9091/api/v1/query?query=sum(claude_code_cost_usage_USD_total)" | jq -r '.data.result[0].value[1] // "0"')
+INPUT_TOKENS=$(curl -s "http://localhost:9091/api/v1/query?query=sum(claude_code_token_usage_tokens_total{type=\"input\"})" | jq -r '.data.result[0].value[1] // "0"')
+OUTPUT_TOKENS=$(curl -s "http://localhost:9091/api/v1/query?query=sum(claude_code_token_usage_tokens_total{type=\"output\"})" | jq -r '.data.result[0].value[1] // "0"')
 
 # Generate report with live data
 claude -p "Using the Linear MCP, analyze our team's velocity and combine with these live Claude Code metrics:
@@ -511,7 +511,7 @@ Create a `managed-settings.json` file:
 {
   "telemetry": {
     "enabled": true,
-    "endpoint": "https://your-otel-collector.company.com:4317",
+    "endpoint": "https://your-otel-collector.company.com:7110",
     "headers": {
       "Authorization": "Bearer ${OTEL_TOKEN}"
     }

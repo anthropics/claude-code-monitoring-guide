@@ -1,0 +1,1 @@
+Testing what data PostToolUse hook receives for Write operations

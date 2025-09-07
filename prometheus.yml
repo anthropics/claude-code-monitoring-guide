@@ -17,7 +17,8 @@ scrape_configs:
     static_configs:
       - targets: ['localhost:9090']
 
-  # Add additional scraping targets here if needed
-  # - job_name: 'your-app'
-  #   static_configs:
-  #     - targets: ['your-app:8080']
+  # Scrape Pushgateway for Claude metrics
+  - job_name: 'pushgateway'
+    honor_labels: true
+    static_configs:
+      - targets: ['pushgateway:9091']

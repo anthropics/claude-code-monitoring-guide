@@ -1,0 +1,36 @@
+{
+  "linear": {
+    "type": "sse",
+    "url": "https://mcp.linear.app/sse",
+    "description": "Linear workspace integration"
+  },
+  "playwright": {
+    "type": "stdio",
+    "command": "npx",
+    "args": ["@playwright/mcp@latest"],
+    "description": "Browser automation testing"
+  },
+  "context7": {
+    "type": "stdio",
+    "command": "npx",
+    "args": ["-y", "@upstash/context7-mcp"],
+    "description": "Library documentation lookup"
+  },
+  "task-master": {
+    "type": "stdio",
+    "command": "npx",
+    "args": ["-y", "task-master-ai"],
+    "description": "AI-powered task management"
+  },
+  "zen": {
+    "type": "stdio",
+    "command": "${ZEN_MCP_SERVER_PATH}/.zen_venv/bin/python",
+    "args": ["${ZEN_MCP_SERVER_PATH}/server.py"],
+    "description": "Central AI collaboration server (thinkdeep, consensus, challenge, codereview)"
+  },
+  "notion": {
+    "type": "sse",
+    "url": "https://mcp.notion.com/mcp",
+    "description": "Notion workspace integration"
+  }
+}

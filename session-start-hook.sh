@@ -1,0 +1,1 @@
+/Users/chadwalters/source/work/claude-code-monitoring-guide/hooks/session-start-hook.sh

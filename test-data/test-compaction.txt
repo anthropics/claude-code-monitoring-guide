@@ -1,0 +1,1 @@
+This is test content to potentially trigger a compaction event. We need to generate enough context to cause Claude Code to compact the conversation history. This might require more substantial content generation or multiple tool calls that create a large context window usage scenario.
