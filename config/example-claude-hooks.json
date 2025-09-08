@@ -1,0 +1,36 @@
+{
+  "comment": "Example hooks for sending custom metrics from Claude Code events",
+  "hooks": {
+    "Compact": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/path/to/send-custom-metric.sh compact"
+          }
+        ]
+      }
+    ],
+    "ToolUse": [
+      {
+        "matcher": "Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/path/to/send-custom-metric.sh file 'edit' '${file_path}'"
+          }
+        ]
+      },
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/path/to/send-custom-metric.sh file 'create' '${file_path}'"
+          }
+        ]
+      }
+    ]
+  }
+}

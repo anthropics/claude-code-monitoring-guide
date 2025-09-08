@@ -1,0 +1,44 @@
+{
+  "hooks": {
+    "Compact": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/chadwalters/source/work/claude-code-monitoring-guide/compact-hook.sh"
+          }
+        ]
+      }
+    ],
+    "ToolUse": [
+      {
+        "matcher": "Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/chadwalters/source/work/claude-code-monitoring-guide/tool-usage-hook.sh Edit '${file_path}'"
+          }
+        ]
+      },
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/chadwalters/source/work/claude-code-monitoring-guide/tool-usage-hook.sh Write '${file_path}'"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/chadwalters/source/work/claude-code-monitoring-guide/tool-usage-hook.sh Bash"
+          }
+        ]
+      }
+    ]
+  }
+}

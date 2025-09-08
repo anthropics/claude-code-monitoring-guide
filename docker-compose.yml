@@ -6,9 +6,9 @@ services:
     volumes:
       - ./otel-collector-config.yaml:/etc/otel-collector-config.yaml
     ports:
-      - "4317:4317"   # OTLP gRPC receiver
-      - "4318:4318"   # OTLP HTTP receiver
-      - "8889:8889"   # Prometheus metrics
+      - "7110:4317"   # OTLP gRPC receiver
+      - "7111:4318"   # OTLP HTTP receiver
+      - "7112:8889"   # Prometheus metrics
     depends_on:
       - prometheus
 
@@ -17,7 +17,7 @@ services:
     image: prom/prometheus:latest
     container_name: prometheus
     ports:
-      - "9090:9090"
+      - "7100:9090"
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
       - prometheus_data:/prometheus
@@ -28,13 +28,24 @@ services:
       - '--web.console.templates=/etc/prometheus/consoles'
       - '--storage.tsdb.retention.time=200h'
       - '--web.enable-lifecycle'
+      - '--web.enable-remote-write-receiver'
+
+  # Prometheus Pushgateway for custom metrics
+  pushgateway:
+    image: prom/pushgateway:latest
+    container_name: pushgateway
+    ports:
+      - "7101:9091"
+    volumes:
+      - pushgateway_data:/tmp
+    restart: unless-stopped
 
   # Grafana
   grafana:
     image: grafana/grafana:latest
     container_name: grafana
     ports:
-      - "3000:3000"
+      - "7102:3000"
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=admin
     volumes:
@@ -47,3 +58,4 @@ services:
 volumes:
   prometheus_data:
   grafana_data:
+  pushgateway_data:

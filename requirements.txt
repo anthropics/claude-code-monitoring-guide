@@ -1,0 +1,16 @@
+# Claude Code Monitoring Dependencies
+
+# Core dependencies
+requests>=2.31.0
+prometheus-client>=0.19.0
+
+# Data processing
+jq>=1.6.0
+
+# Optional: Advanced analytics
+pandas>=2.0.0
+numpy>=1.24.0
+
+# Development dependencies  
+pytest>=7.4.0
+black>=23.0.0
