@@ -55,7 +55,7 @@ def deploy_dashboard(dashboard_path, grafana_url="http://localhost:7102", userna
         return False
 
 def main():
-    print("🚀 Deploying AI Tool Agent Dashboard to Grafana\n")
+    print("🚀 Deploying Claude Code Dashboards to Grafana\n")
     
     # Dashboard paths
     dashboard_dir = Path(__file__).parent.parent / "grafana" / "provisioning" / "dashboards"
@@ -94,9 +94,10 @@ def main():
         # Small delay between deployments
         time.sleep(1)
     
-    print(f"🎉 Deployment Complete: {deployed}/{len(dashboards)} dashboard deployed")
-    print("\n📋 Dashboard URL:")
-    print("   • Claude Code - AI Tool Agents: http://localhost:7102/d/ai-agents-simple")
+    print(f"🎉 Deployment Complete: {deployed}/{len(dashboards)} dashboards deployed")
+    print("\n📋 Access Dashboards:")
+    print("   • Grafana: http://localhost:7102 (admin/admin)")
+    print("   • Use Grafana UI to browse deployed dashboards")
     
     print("\n💡 Dashboard Features:")
     print("   • Total usage and cost tracking")

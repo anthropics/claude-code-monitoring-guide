@@ -1,26 +1,34 @@
-# Claude Code Metrics Reference
+# Muninn Metrics Reference
 
-## 🔑 Our Breakthrough: Timestamp-Based Counter System
+## Platform Overview
 
-**What Makes This Work**: Each metric includes a millisecond timestamp to ensure proper counter accumulation.
+**Muninn** is a universal AI tool observability platform. This reference documents the **Claude Code adapter** metrics - the first implementation of Muninn's extensible monitoring system.
+
+**Future Vision**: Additional adapters for GitHub Copilot, OpenAI API, Cursor, and custom AI tools will add their own metric namespaces to this universal platform.
+
+## 🔑 Breakthrough Innovation: Timestamp-Based Counter System
+
+**What Makes This Work**: Each metric includes a millisecond timestamp to ensure proper counter accumulation across all AI tool adapters.
 
 **The Problem We Solved**: Standard Pushgateway metrics overwrite each other (1→1→1) instead of accumulating (33→37→42).
 
-**Our Solution**: 
+**Universal Solution**: 
 ```python
 timestamp_id = int(time.time() * 1000)  # millisecond timestamp for uniqueness
 url = f'{pushgateway_url}/metrics/job/claude_code_tools/.../ts/{timestamp_id}'
 ```
+*This pattern will be used by all Muninn adapters for consistent time-series data.*
 
-## 📊 Our Custom Metrics (Actually Working)
+## 📊 Claude Code Adapter Metrics (Production Ready)
 
 ### 4 Production Dashboard Categories
 
-Our monitoring system captures real Claude Code usage via hooks:
+The Claude Code adapter captures real usage via hook-based monitoring:
 
 - ✅ **Real-Time**: Every tool use captured instantly
 - 📊 **4 Working Dashboards**: Tools, Bash Commands, Agents, MCP  
 - 🔧 **Actual Data**: No estimates - real usage counts with proper time-series
+- 🔌 **Extensible**: Pattern established for future AI tool adapters
 
 ### Official OpenTelemetry Metrics (Reference)
 
@@ -32,9 +40,9 @@ Claude Code can emit official metrics when `CLAUDE_CODE_ENABLE_TELEMETRY=1` is s
 
 ---
 
-## Current Hook-Based Metrics (WORKING NOW)
+## Claude Code Adapter Metrics (WORKING NOW)
 
-Our production-tool-hook.sh generates these metrics for all 4 dashboards:
+The Claude Code adapter's production-tool-hook.sh generates these metrics for all 4 dashboards:
 
 ### 🔧 Tool Usage Metrics
 - **`claude_custom_tool_usage_total`**: Every Read, Write, Edit, Bash, Task, MCP tool use
@@ -283,15 +291,18 @@ These are **NOT** available in OTEL metrics:
 - **Error messages** - Errors aren't exposed in metrics
 - **Custom metadata** - Can't add your own labels
 
-## 🔧 Can You Add Custom Metrics?
+## 🔧 Extending Muninn Metrics
 
-**No**, you cannot add custom metrics to Claude Code's telemetry. The metrics are emitted directly by Claude Code's internal instrumentation and cannot be extended.
+### Claude Code Adapter
+**No**, you cannot add custom metrics to Claude Code's official telemetry. The metrics are emitted directly by Claude Code's internal instrumentation and cannot be extended.
 
-What you CAN do:
+### Universal Platform Options
+What you CAN do with Muninn:
 - **Process existing metrics** - Create derived metrics in Prometheus
-- **Add recording rules** - Pre-calculate complex queries
+- **Add recording rules** - Pre-calculate complex queries  
 - **Build custom exporters** - Read from other sources and correlate
 - **Use metric relabeling** - Transform labels in Prometheus
+- **Create new adapters** - Build adapters for other AI tools following the Claude pattern
 
 Example recording rule in `prometheus.yml`:
 ```yaml
@@ -315,7 +326,7 @@ groups:
 
 ```bash
 # Get current list from your Prometheus:
-curl -s "http://localhost:9091/api/v1/label/__name__/values" | \
+curl -s "http://localhost:7100/api/v1/label/__name__/values" | \
   jq -r '.data[] | select(startswith("claude_code_"))'
 ```
 
@@ -331,50 +342,56 @@ Current metrics (as of v1.0.90):
 9. `claude_code_session_count_total`
 10. `claude_code_token_usage_tokens_total`
 
-## 🚀 Getting Started
+## 🚀 Getting Started with Muninn
 
-**Option 1: Hook-Based Monitoring (Recommended)**
+**⚠️ Important**: All commands must be run from the `infrastructure/` directory.
 
-1. **Setup monitoring stack**:
+**Option 1: Claude Code Adapter Hook-Based Monitoring (Recommended)**
+
+1. **Setup Muninn platform**:
    ```bash
+   # Navigate to infrastructure directory
+   cd infrastructure
+   
    # Complete setup with health checks
    just setup
    ```
 
-2. **Deploy Claude Code hooks**:
+2. **Deploy Claude Code adapter hooks**:
    ```bash  
-   # Install hooks for current user
+   # Install Claude Code adapter hooks for current user
    just deploy hooks
    ```
 
-3. **Use Claude Code normally** - metrics are captured automatically
+3. **Use Claude Code normally** - metrics are captured automatically by the adapter
 
-4. **View dashboards**:
+4. **View Claude adapter dashboards**:
    ```bash
    # Open Grafana dashboards
    just service console grafana
    ```
 
-**Option 2: Official OpenTelemetry (Advanced)**
+**Option 2: Official Claude Code OpenTelemetry (Advanced)**
 
-1. **Enable telemetry**:
+1. **Enable Claude Code telemetry**:
    ```bash
    export CLAUDE_CODE_ENABLE_TELEMETRY=1
    export OTEL_METRICS_EXPORTER=otlp
    export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:7110
    ```
 
-2. **Start monitoring services**:
+2. **Start Muninn services**:
    ```bash
+   # From infrastructure/ directory
    just up
    ```
 
-3. **Query metrics**:
+3. **Query Claude Code metrics**:
    ```bash
    # Check total cost
    curl -s "http://localhost:7100/api/v1/query?query=sum(claude_code_cost_usage_USD_total)" | jq
    
-   # Or use our helper commands
+   # Or use Muninn helper commands
    just test all
    just monitor validate
    ```

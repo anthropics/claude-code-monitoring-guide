@@ -36,7 +36,7 @@ class TestManager:
     
     def __init__(self):
         self.project_root = Path(__file__).parent.parent
-        self.hook_script = self.project_root / "production-tool-hook.sh"
+        self.hook_script = self.project_root / "../adapters/claude/hooks/muninn-claude-adapter-hook.sh"
         
         # Service endpoints
         self.endpoints = {
@@ -184,7 +184,7 @@ class TestManager:
         """Test injecting a custom metric directly to pushgateway."""
         print("🔍 Testing direct metric injection...")
         
-        test_metric = f"""claude_custom_test_metric{{session_id="test-session",tool="TestTool",user="testuser"}} 1 {int(time.time() * 1000)}"""
+        test_metric = f"""claude_custom_test_metric{{session_id="test-session",tool="TestTool",user="testuser"}} 1\n"""
         
         try:
             response = requests.post(
@@ -371,32 +371,36 @@ class TestManager:
         
         print(f"   ✅ Hook executed successfully")
         
-        # Wait for metrics to be scraped
-        print(f"   ⏳ Waiting for metric propagation...")
-        time.sleep(5)
+        # Check if metric appears in pushgateway first (should be immediate)
+        print(f"   ⏳ Waiting for metric to reach Pushgateway...")
+        time.sleep(2)
         
-        # Check if metric appears in pushgateway
         success, response = self.make_request(f"{self.endpoints['pushgateway']}/metrics")
-        if success and test_session_id in response.text:
-            print(f"   ✅ Metric found in Pushgateway")
-        else:
-            print(f"   ⚠️  Metric not found in Pushgateway (may take time to appear)")
-        
-        # Check if metric appears in Prometheus  
-        query_url = f"{self.endpoints['prometheus']}/api/v1/query?query=claude_custom_tool_usage_total{{session_id=\"{test_session_id}\"}}"
-        success, response = self.make_request(query_url)
-        
-        if success and response.status_code == 200:
-            data = response.json()
-            if data.get('data', {}).get('result'):
-                print(f"   ✅ Metric found in Prometheus")
-                return True
-            else:
-                print(f"   ⚠️  Metric not yet in Prometheus (scraping takes time)")
-                return False
-        else:
-            print(f"   ❌ Failed to query Prometheus")
+        if not (success and test_session_id in response.text):
+            print(f"   ❌ Metric not found in Pushgateway")
             return False
+        
+        print(f"   ✅ Metric found in Pushgateway")
+        
+        # Poll Prometheus for up to 60 seconds (2 full scrape cycles)
+        print(f"   ⏳ Polling Prometheus for metric (up to 60s, checking every 10s)...")
+        query_url = f"{self.endpoints['prometheus']}/api/v1/query?query=claude_custom_tool_usage_total{{session_id=\"{test_session_id}\"}}"
+        
+        for attempt in range(6):  # 6 attempts * 10 seconds = 60 seconds total
+            time.sleep(10)
+            
+            success, response = self.make_request(query_url)
+            if success and response.status_code == 200:
+                data = response.json()
+                if data.get('data', {}).get('result'):
+                    elapsed = (attempt + 1) * 10
+                    print(f"   ✅ Metric found in Prometheus after {elapsed}s")
+                    return True
+            
+            print(f"   ⏳ Attempt {attempt + 1}/6: Not yet scraped by Prometheus...")
+        
+        print(f"   ❌ Metric not found in Prometheus after 60s (scraping issue)")
+        return False
     
     def test_hooks(self) -> int:
         """Run all hook-related tests."""

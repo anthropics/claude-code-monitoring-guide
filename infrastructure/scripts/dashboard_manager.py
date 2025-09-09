@@ -35,6 +35,8 @@ class DashboardManager:
         self.project_root = Path(__file__).parent.parent
         self.dashboards_dir = self.project_root / "grafana" / "dashboards"
         self.provisioning_dir = self.project_root / "grafana" / "provisioning" / "dashboards"
+        # Claude adapter dashboards location
+        self.claude_dashboards_dir = self.project_root / ".." / "adapters" / "claude" / "dashboards"
         
         # Grafana API configuration
         self.grafana = {
@@ -74,13 +76,13 @@ class DashboardManager:
         """Get all dashboard files from local directories."""
         dashboard_files = {}
         
-        # Check both directories for JSON files
-        for directory in [self.dashboards_dir, self.provisioning_dir]:
+        # Check all directories for JSON files (Claude dashboards first, then others)
+        for directory in [self.claude_dashboards_dir, self.dashboards_dir, self.provisioning_dir]:
             if directory.exists():
                 for file_path in directory.glob("*.json"):
                     # Use filename without extension as key
                     name = file_path.stem
-                    # Skip if already found (provisioning takes precedence)
+                    # Skip if already found (first directory takes precedence)
                     if name not in dashboard_files:
                         dashboard_files[name] = file_path
         
@@ -114,8 +116,36 @@ class DashboardManager:
                     # Check if we have a local file for this dashboard
                     local_status = "❌"
                     for name, path in local_files.items():
-                        if name.lower().replace('-', '_') in title.lower().replace('-', '_'):
-                            local_status = f"✅ {path.name}"
+                        # Multiple matching approaches for better compatibility
+                        name_clean = name.lower().replace('-', '_').replace('dashboard', '').replace('simple', '').strip('_')
+                        title_clean = title.lower().replace('-', '_').replace(' ', '').replace('(', '').replace(')', '').replace('claude', '').replace('code', '').replace('simple', '').strip('_')
+                        uid_clean = uid.lower().replace('-', '_').replace('claude', '').replace('code', '').strip('_')
+                        
+                        # Special case mappings for tricky names
+                        special_matches = {
+                            'bash_commands': ['bashcommands', 'bash_commands'],
+                            'tool_usage': ['toolusage', 'tool_usage'], 
+                            'original_working': ['working', 'original_working']
+                        }
+                        
+                        # Check various matching patterns
+                        matched = False
+                        
+                        # Direct matches
+                        if (name_clean in title_clean or title_clean in name_clean or
+                            name_clean in uid_clean or uid_clean in name_clean):
+                            matched = True
+                        
+                        # Special case matches
+                        for key, variants in special_matches.items():
+                            if key in name_clean:
+                                for variant in variants:
+                                    if variant in title_clean or variant in uid_clean:
+                                        matched = True
+                                        break
+                        
+                        if matched:
+                            local_status = f"✅"
                             break
                     
                     print(f"{title:<30} {uid:<15} {local_status}")
@@ -360,7 +390,7 @@ def main():
     parser.add_argument('--action', required=True,
                        choices=['list', 'publish', 'update', 'backup', 'export', 'import'],
                        help='Action to perform')
-    parser.add_argument('--name', default='',
+    parser.add_argument('--name', default=None,
                        help='Dashboard name (for publish, update, export, import)')
     
     args = parser.parse_args()
@@ -368,18 +398,33 @@ def main():
     try:
         manager = DashboardManager()
         
+        # Handle empty string as None for optional name
+        name = args.name if args.name and args.name.strip() else None
+        
         if args.action == 'list':
             return manager.action_list()
         elif args.action == 'publish':
-            return manager.action_publish(args.name)
+            if not name:
+                print("❌ Dashboard name required for publish action")
+                return 1
+            return manager.action_publish(name)
         elif args.action == 'update':
-            return manager.action_update(args.name)
+            if not name:
+                print("❌ Dashboard name required for update action")
+                return 1
+            return manager.action_update(name)
         elif args.action == 'export':
-            return manager.action_export(args.name)
+            if not name:
+                print("❌ Dashboard name required for export action")
+                return 1
+            return manager.action_export(name)
         elif args.action == 'backup':
             return manager.action_backup()
         elif args.action == 'import':
-            return manager.action_import(args.name)
+            if not name:
+                print("❌ Dashboard name required for import action")
+                return 1
+            return manager.action_import(name)
         else:
             print(f"❌ Unknown action: {args.action}")
             return 1

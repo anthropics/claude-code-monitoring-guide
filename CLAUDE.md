@@ -6,18 +6,21 @@
 @troubleshooting.md
 @README.md
 
-## 🎯 CLAUDE CODE MONITORING CORE RULES
+## 🎯 MUNINN CLAUDE CODE ADAPTER CORE RULES
 
 ### 🚀 CORE MONITORING WORKFLOW
 
-**For monitoring setup**: Always start with validation workflow below
+**For monitoring setup**: Always start with validation workflow below (all commands from `infrastructure/` directory)
 **For operational issues**: Use diagnostic commands first before manual interventions
 
 **Essential Commands:**
 ```bash
+# Navigate to infrastructure directory first
+cd infrastructure
+
 # FIRST-TIME SETUP (complete workflow)
 just setup                    # Prerequisite check + service start + validation
-just deploy hooks            # Install monitoring hooks for current user  
+just deploy hooks            # Install Claude Code adapter hooks for current user  
 just test all               # Comprehensive system validation
 
 # DAILY OPERATIONS
@@ -27,7 +30,7 @@ just monitor validate       # Full stack health check
 
 # TROUBLESHOOTING WORKFLOW
 just monitor status         # Service health diagnostics
-just test hooks            # Validate Claude Code hook system
+just test hooks            # Validate Claude Code adapter hook system
 just service logs <service> # Debug specific service issues
 just service restart <service> # Fix problematic services
 ```
@@ -35,12 +38,13 @@ just service restart <service> # Fix problematic services
 ### 📍 CRITICAL RESOURCE REFERENCES
 ```
 ┌─────────────────────────────────────────────────────┐
-│ 📍 CRITICAL RESOURCE REFERENCES                      │
+│ 📍 CRITICAL RESOURCE REFERENCES (Muninn Structure)   │
 ├─────────────────────────────────────────────────────┤
 │ • docs/INDEX.md - Complete documentation map        │
 │ • JUSTFILE-GUIDE.md - Production service management │
 │ • METRICS-REFERENCE.md - All metrics + queries     │
 │ • troubleshooting.md - Diagnostic procedures        │
+│ • adapters/claude/README.md - Claude adapter guide │
 │ • README-TEAM.md - Team deployment guide           │
 └─────────────────────────────────────────────────────┘
 ```
@@ -58,11 +62,12 @@ just service restart <service> # Fix problematic services
 - Performance issues → Check service resource usage before scaling solutions
 
 **Recommended Diagnostic Pattern:**
-1. Run `just status` to check overall system health
-2. Run `just monitor validate` for comprehensive validation  
-3. Run `just test <specific>` to isolate the problematic component
-4. Use `just service logs <service>` to debug specific issues
-5. Only after system-level diagnosis, investigate application-level problems
+1. Navigate to `infrastructure/` directory for all operations
+2. Run `just status` to check overall system health
+3. Run `just monitor validate` for comprehensive validation  
+4. Run `just test <specific>` to isolate the problematic component
+5. Use `just service logs <service>` to debug specific issues
+6. Only after system-level diagnosis, investigate application-level problems
 
 ---
 
@@ -115,17 +120,17 @@ http://localhost:7102  # Grafana (admin/admin)
 
 ---
 
-## 🚨 HOOK SYSTEM ARCHITECTURE (CRITICAL)
+## 🚨 CLAUDE CODE ADAPTER HOOK SYSTEM ARCHITECTURE (CRITICAL)
 
-**FUNDAMENTAL UNDERSTANDING - How Claude Code monitoring actually works:**
+**FUNDAMENTAL UNDERSTANDING - How the Muninn Claude Code adapter actually works:**
 
-### 🎣 Hook Installation: `just deploy hooks`
+### 🎣 Hook Installation: `just deploy hooks` (from infrastructure/)
 - **Target**: `~/.claude/settings.json` configuration  
-- **Process**: Installs production-tool-hook.sh with PreToolUse/PostToolUse events
-- **Scope**: Per-user installation, captures ALL Claude Code tool usage
+- **Process**: Installs `adapters/claude/hooks/production-tool-hook.sh` with PreToolUse/PostToolUse events
+- **Scope**: Per-user installation, captures ALL Claude Code tool usage for Muninn
 - **Validation**: Use `just deploy validate` to verify installation
 
-### 📊 Metric Generation: `production-tool-hook.sh`
+### 📊 Metric Generation: `adapters/claude/hooks/production-tool-hook.sh`
 - **Trigger**: Every Claude Code tool use (Read, Write, Edit, Bash, etc.)
 - **Process**: JSON stdin → Python parsing → HTTP POST to Pushgateway
 - **Output**: claude_code_* metrics (cost, tokens, LOC) + claude_custom_* metrics (detailed tracking)

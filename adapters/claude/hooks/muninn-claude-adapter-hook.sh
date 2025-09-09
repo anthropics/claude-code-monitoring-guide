@@ -4,15 +4,25 @@
 # Sends metrics to Prometheus pushgateway
 
 PUSHGATEWAY_URL="http://localhost:7101"
+DEBUG_LOG="/tmp/muninn-hook-debug.log"
+
+# Log that hook was called
+echo "$(date '+%Y-%m-%d %H:%M:%S') - Hook invoked" >> "$DEBUG_LOG"
 
 # Read JSON from stdin
 JSON_DATA=$(cat)
 
+# Log the JSON data received
+echo "$(date '+%Y-%m-%d %H:%M:%S') - JSON received: ${JSON_DATA:0:200}..." >> "$DEBUG_LOG"
+
 # Extract session_id from JSON for user_id lookup
 SESSION_ID=$(echo "$JSON_DATA" | python3 -c "import json, sys; data=json.load(sys.stdin); print(data.get('session_id', 'unknown'))")
 
+# Log the session ID
+echo "$(date '+%Y-%m-%d %H:%M:%S') - Session ID: $SESSION_ID" >> "$DEBUG_LOG"
+
 # Get user_id using session correlation, but prefer readable user info
-HASHED_USER_ID=$("$(dirname "$0")/scripts/get_claude_user_id_simple.sh" "$SESSION_ID")
+HASHED_USER_ID=$("$(dirname "$0")/../../../infrastructure/scripts/get_claude_user_id_simple.sh" "$SESSION_ID")
 
 # Try to get more readable user identification
 GIT_EMAIL=$(git config user.email 2>/dev/null)
@@ -54,7 +64,8 @@ except json.JSONDecodeError as e:
 # Extract core fields  
 session_id = os.environ.get('SESSION_ID', 'unknown')
 tool_name = data.get('tool_name', 'unknown')
-tool_input = data.get('tool_input', {})
+# Support both 'tool_input' and 'params' field names
+tool_input = data.get('tool_input', data.get('params', {}))
 tool_result = data.get('tool_result', {})
 cwd = data.get('cwd', 'unknown')
 
@@ -85,7 +96,8 @@ agent_type = 'unknown'
 task_description = ''
 prompt_length = 0
 if tool_name == 'Task':
-    agent_type = tool_input.get('subagent_type', 'unknown')
+    # Support both 'subagent_type' and 'agent_type' field names
+    agent_type = tool_input.get('subagent_type', tool_input.get('agent_type', 'unknown'))
     task_description = tool_input.get('description', '')
     prompt_length = len(tool_input.get('prompt', ''))
 

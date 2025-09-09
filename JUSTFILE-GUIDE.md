@@ -1,17 +1,19 @@
-# Justfile System Guide
+# Muninn Justfile System Guide
 
 ## 🚀 Overview
 
-The Claude Code monitoring repository includes a comprehensive `justfile` that provides a production-grade service management system. This guide explains all available commands and their usage.
+Muninn includes a comprehensive `justfile` that provides production-grade service management for the universal AI tool observability platform. This guide explains all available commands and their usage.
+
+**🔑 Important**: All justfile commands must be run from the `infrastructure/` directory.
 
 ## 📋 Quick Reference
 
 ```bash
-# Essential Commands
+# Essential Commands (run from infrastructure/ directory)
 just setup                    # Complete initial setup
 just up                       # Start all services
 just status                   # Check service health & URLs
-just deploy hooks             # Install Claude Code hooks
+just deploy hooks             # Install Claude Code adapter hooks
 
 # Get Help
 just help                     # Show all commands
@@ -93,7 +95,7 @@ just monitor logs grafana      # Tail Grafana logs
   - `all` - Run all tests
 
 ```bash
-just test hooks               # Test Claude Code hooks
+just test hooks               # Test Claude Code adapter hooks
 just test all                 # Run comprehensive tests
 ```
 
@@ -115,8 +117,8 @@ just dashboard backup                  # Export all to backup files
 ```
 
 **Dashboard Locations:**
-- `grafana/dashboards/` - Dashboard JSON files
-- `grafana/provisioning/dashboards/` - Provisioned dashboards
+- `adapters/claude/dashboards/` - Claude adapter dashboard JSON files
+- `grafana/provisioning/dashboards/` - Dashboard provisioning configuration
 
 ## 🚀 Deployment & Setup
 
@@ -129,12 +131,12 @@ just dashboard backup                  # Export all to backup files
 - Validates the installation  
 - Shows next steps
 
-### Hook Deployment
+### Claude Adapter Hook Deployment
 
 **`just deploy <action> [username]`**
-- Deploy Claude Code hooks to user settings:
-  - `hooks [username]` - Install production-tool-hook.sh
-  - `validate [username]` - Verify hook installation
+- Deploy Claude Code adapter hooks to user settings:
+  - `hooks [username]` - Install Claude adapter production-tool-hook.sh
+  - `validate [username]` - Verify Claude adapter hook installation
 
 ```bash
 just deploy hooks              # Deploy for current user
@@ -145,8 +147,8 @@ just deploy validate          # Verify deployment
 ### Configuration Management
 
 **`just export-config [path]`**
-- Export complete monitoring configuration to archive
-- Default: `./claude-monitoring-config.tar.gz`
+- Export complete Muninn configuration to archive
+- Default: `./muninn-config.tar.gz`
 - Includes all configuration files and scripts
 
 **`just import-config <path>`**
@@ -182,8 +184,20 @@ All services use organized **7100+ port range**:
 | Grafana | 7102 | Monitoring dashboards and visualization |
 | OTEL Collector | 7110-7112 | OpenTelemetry metrics collection |
 
-### Service Stack
+### Universal Platform Service Stack
 
+```
+AI Tool Use → Adapter Hook → Pushgateway (7101)
+    │             │               ↓
+Claude Code ──┐   │         Prometheus (7100)
+GPT API ─────┼───┤               ↓
+Copilot ─────┼───┤          Grafana (7102)  
+Custom ──────┘   │               ↓
+              Universal      Dashboards
+             Infrastructure
+```
+
+**Current: Claude Code Adapter**
 ```
 Claude Code → production-tool-hook.sh → Pushgateway (7101)
                                             ↓
@@ -196,11 +210,11 @@ Claude Code → production-tool-hook.sh → Pushgateway (7101)
 
 The justfile system uses Python helper scripts for advanced operations:
 
-- **`scripts/service_manager.py`** - Docker service orchestration and health checking
-- **`scripts/monitor_manager.py`** - Monitoring validation and status reporting  
-- **`scripts/dashboard_manager.py`** - Dashboard CRUD operations
-- **`scripts/test_manager.py`** - Comprehensive testing utilities
-- **`scripts/deploy_manager.py`** - Hook deployment and configuration
+- **`infrastructure/scripts/service_manager.py`** - Docker service orchestration and health checking
+- **`infrastructure/scripts/monitor_manager.py`** - Monitoring validation and status reporting  
+- **`infrastructure/scripts/dashboard_manager.py`** - Dashboard CRUD operations
+- **`infrastructure/scripts/test_manager.py`** - Comprehensive testing utilities
+- **`infrastructure/scripts/deploy_manager.py`** - Claude adapter hook deployment and configuration
 
 ## 💡 Usage Patterns
 
@@ -307,7 +321,8 @@ just test hooks            # Test hook execution
 
 ## 📚 Related Documentation
 
-- **[README.md](README.md)** - Main repository overview with quick start
+- **[README.md](README.md)** - Main Muninn platform overview with quick start
+- **[adapters/claude/README.md](adapters/claude/README.md)** - Claude Code adapter-specific setup guide ⭐
 - **[troubleshooting.md](troubleshooting.md)** - Troubleshooting guide with justfile commands
 - **[METRICS-REFERENCE.md](METRICS-REFERENCE.md)** - Complete metrics reference
 - **[README-TEAM.md](README-TEAM.md)** - Team deployment guide

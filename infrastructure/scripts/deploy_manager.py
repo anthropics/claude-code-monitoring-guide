@@ -34,7 +34,7 @@ class DeployManager:
     
     def __init__(self):
         self.project_root = Path(__file__).parent.parent
-        self.hook_script = self.project_root / "production-tool-hook.sh"
+        self.hook_script = self.project_root / "../adapters/claude/hooks/muninn-claude-adapter-hook.sh"
         
         # Default Claude settings locations
         self.default_claude_dir = Path.home() / ".claude"
@@ -135,16 +135,14 @@ class DeployManager:
             
             print(f"✅ Hook script found: {self.hook_script}")
             
-            # Create target directory structure
-            target_dir = claude_dir / "claude-code-monitoring"
-            target_dir.mkdir(parents=True, exist_ok=True)
+            # Use the hook script directly from the Muninn project location
+            # Convert to absolute path
+            target_hook_script = self.hook_script.resolve()
             
-            # Copy hook script to target location
-            target_hook_script = target_dir / "production-tool-hook.sh"
-            shutil.copy2(self.hook_script, target_hook_script)
-            os.chmod(target_hook_script, 0o755)  # Ensure executable
+            # Ensure the hook script is executable
+            os.chmod(target_hook_script, 0o755)
             
-            print(f"✅ Hook script copied to: {target_hook_script}")
+            print(f"✅ Hook script location: {target_hook_script}")
             
             # Load existing settings
             print(f"📋 Loading Claude settings from: {settings_file}")
@@ -171,14 +169,9 @@ class DeployManager:
                     print("❌ Deployment cancelled")
                     return 1
                 
-                # Merge hooks
-                for event_type, hooks in hook_config.items():
-                    if event_type in existing_hooks:
-                        existing_hooks[event_type].extend(hooks)
-                    else:
-                        existing_hooks[event_type] = hooks
-                
-                settings["hooks"] = existing_hooks
+                # Replace existing hooks instead of merging to avoid duplicates
+                print("   Replacing existing hooks with Muninn hooks...")
+                settings["hooks"] = hook_config
             else:
                 # No existing hooks, add ours
                 settings["hooks"] = hook_config
@@ -275,7 +268,7 @@ class DeployManager:
                 validation_errors.append("Settings file missing")
             
             # Check hook script installation
-            hook_install_path = claude_dir / "claude-code-monitoring" / "production-tool-hook.sh"
+            hook_install_path = claude_dir / "claude-code-monitoring" / "muninn-claude-adapter-hook.sh"
             if hook_install_path.exists():
                 if os.access(hook_install_path, os.X_OK):
                     print(f"✅ Hook script: {hook_install_path} (executable)")
@@ -364,7 +357,15 @@ class DeployManager:
                             for hook_group in original_hooks:
                                 filtered_group_hooks = []
                                 for hook in hook_group.get("hooks", []):
-                                    if "claude-code-monitoring" not in hook.get("command", ""):
+                                    command = hook.get("command", "")
+                                    # Remove hooks that contain muninn-related paths
+                                    is_muninn_hook = (
+                                        "claude-code-monitoring" in command or
+                                        "muninn" in command.lower() or
+                                        "muninn-claude-adapter-hook.sh" in command or
+                                        "test-minimal-hook.sh" in command
+                                    )
+                                    if not is_muninn_hook:
                                         filtered_group_hooks.append(hook)
                                     else:
                                         removed_count += 1
@@ -399,7 +400,7 @@ def main():
     parser.add_argument('--action', required=True,
                        choices=['hooks', 'validate', 'uninstall'],
                        help='Deployment action to perform')
-    parser.add_argument('--username', default='',
+    parser.add_argument('--username', default=None,
                        help='Target username (default: current user)')
     
     args = parser.parse_args()
@@ -407,7 +408,8 @@ def main():
     try:
         manager = DeployManager()
         
-        username = args.username if args.username else None
+        # Handle empty string as None for optional username
+        username = args.username if args.username and args.username.strip() else None
         
         if args.action == 'hooks':
             return manager.action_hooks(username)

@@ -1,0 +1,1 @@
+adapters/claude/hooks/muninn-claude-adapter-hook.sh

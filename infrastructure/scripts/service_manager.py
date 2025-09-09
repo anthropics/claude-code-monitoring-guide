@@ -62,9 +62,9 @@ class ServiceManager:
                 'description': 'Monitoring dashboards and visualization'
             },
             'otel-collector': {
-                'container': 'claude-code-monitoring-guide-otel-collector-1',
+                'container': 'infrastructure-otel-collector-1',
                 'ports': [7110, 7111, 7112],
-                'url': 'http://localhost:7112/metrics',
+                'url': 'http://localhost:7112',
                 'health_endpoint': '/metrics',
                 'description': 'OpenTelemetry metrics collection'
             }
@@ -324,27 +324,40 @@ class ServiceManager:
             exit_code, _, _ = self.run_command(['docker', 'container', 'prune', '-f'])
             if exit_code == 0:
                 print("✅ Stopped containers removed")
-        elif level == 'volumes':
-            # Remove containers and volumes (DATA LOSS!)
-            print("⚠️  This will remove ALL data (Prometheus metrics, Grafana dashboards)")
-            confirm = input("Type 'DELETE' to confirm: ")
-            if confirm == 'DELETE':
-                self.action_down(['all'])
-                exit_code, _, _ = self.run_command(['docker-compose', 'down', '-v'])
-                if exit_code == 0:
-                    print("✅ Containers and volumes removed")
-            else:
-                print("❌ Cancelled")
-                return 1
         elif level == 'all':
-            # Nuclear option
-            print("🚨 NUCLEAR OPTION: Removing everything (containers, volumes, networks, images)")
-            confirm = input("Type 'NUCLEAR' to confirm: ")
-            if confirm == 'NUCLEAR':
+            # Remove containers and networks (preserves data volumes)
+            print("📦 Removing all containers and networks (data volumes preserved)")
+            self.action_down(['all'])
+            exit_code, _, _ = self.run_command(['docker-compose', 'down'])
+            if exit_code == 0:
+                print("✅ All containers and networks removed")
+        elif level == 'data':
+            # Remove data volumes (DATA LOSS!)
+            print("⚠️  WARNING: This will permanently delete ALL monitoring data!")
+            print("   📊 Prometheus metrics history")
+            print("   📋 Grafana dashboards and settings")
+            print("   🔄 Pushgateway pending metrics")
+            print("")
+            confirm = input("Type 'DELETE-DATA' to confirm: ")
+            if confirm == 'DELETE-DATA':
                 self.action_down(['all'])
-                self.run_command(['docker-compose', 'down', '-v', '--rmi', 'all'])
-                self.run_command(['docker', 'system', 'prune', '-f'])
-                print("💥 Everything removed")
+                # Remove volumes with new project name
+                exit_code, _, _ = self.run_command(['docker-compose', 'down', '-v'])
+                # Also try to remove old project volumes (ignore errors if they don't exist)
+                try:
+                    self.run_command(['docker', 'volume', 'rm', 'claude-code-monitoring-guide_prometheus_data'])
+                except:
+                    pass
+                try:
+                    self.run_command(['docker', 'volume', 'rm', 'claude-code-monitoring-guide_grafana_data'])
+                except:
+                    pass  
+                try:
+                    self.run_command(['docker', 'volume', 'rm', 'claude-code-monitoring-guide_pushgateway_data'])
+                except:
+                    pass
+                if exit_code == 0:
+                    print("✅ All data volumes removed")
             else:
                 print("❌ Cancelled")
                 return 1
@@ -359,7 +372,7 @@ def main():
     parser.add_argument('--services', default='all',
                        help='Comma-separated list of services or "all"')
     parser.add_argument('--level', default='containers',
-                       choices=['containers', 'volumes', 'all'],
+                       choices=['containers', 'all', 'data'],
                        help='Clean level (for clean action)')
     
     args = parser.parse_args()

@@ -4,7 +4,7 @@ services:
     image: otel/opentelemetry-collector-contrib:latest
     command: ["--config=/etc/otel-collector-config.yaml"]
     volumes:
-      - ./otel-collector-config.yaml:/etc/otel-collector-config.yaml
+      - ../otel-collector-config.yaml:/etc/otel-collector-config.yaml
     ports:
       - "7110:4317"   # OTLP gRPC receiver
       - "7111:4318"   # OTLP HTTP receiver
@@ -50,8 +50,8 @@ services:
       - GF_SECURITY_ADMIN_PASSWORD=admin
     volumes:
       - grafana_data:/var/lib/grafana
-      - ./grafana/provisioning:/etc/grafana/provisioning
-      - ./grafana/dashboards:/var/lib/grafana/dashboards
+      - ../grafana/provisioning:/etc/grafana/provisioning
+      - ../adapters/claude/dashboards:/var/lib/grafana/dashboards
     depends_on:
       - prometheus
 

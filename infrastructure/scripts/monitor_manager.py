@@ -57,7 +57,7 @@ class MonitorManager:
         }
         
         # Hook configuration
-        self.hook_script = self.project_root / "production-tool-hook.sh"
+        self.hook_script = self.project_root / "../adapters/claude/hooks/muninn-claude-adapter-hook.sh"
         
     def run_command(self, cmd: List[str], capture_output: bool = True, 
                    timeout: int = 30) -> Tuple[int, str, str]:
@@ -245,7 +245,7 @@ class MonitorManager:
             'prometheus': 'prometheus',
             'grafana': 'grafana', 
             'pushgateway': 'pushgateway',
-            'otel-collector': 'claude-code-monitoring-guide-otel-collector-1'
+            'otel-collector': 'infrastructure-otel-collector-1'
         }
         
         if service not in container_map:
@@ -289,7 +289,7 @@ class MonitorManager:
         # 2. Check Docker containers
         print("\n2. Checking Docker containers...")
         containers = ['prometheus', 'grafana', 'pushgateway', 
-                     'claude-code-monitoring-guide-otel-collector-1']
+                     'infrastructure-otel-collector-1']
         
         for container in containers:
             exit_code, stdout, _ = self.run_command([

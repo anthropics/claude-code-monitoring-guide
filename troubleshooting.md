@@ -1,19 +1,22 @@
-# Claude Code Troubleshooting Guide
+# Muninn Troubleshooting Guide
 
-Quick solutions for common Claude Code issues related to telemetry and ROI measurement.
+Quick solutions for common Muninn platform issues and Claude Code adapter monitoring problems.
 
 ## Quick Diagnostics (Recommended)
 
-**Use the built-in justfile commands for fast troubleshooting:**
+**Use the built-in justfile commands for fast troubleshooting (from `infrastructure/` directory):**
 
 ```bash
+# Navigate to infrastructure directory first
+cd infrastructure
+
 # Check overall system health
 just status
 
 # Validate entire monitoring stack
 just monitor validate
 
-# Test hooks and data flow
+# Test Claude Code adapter hooks and data flow
 just test all
 
 # Check specific services
@@ -30,7 +33,7 @@ just service restart pushgateway
 - **Pushgateway:** http://localhost:7101
 - **OTEL Collector:** http://localhost:7110-7112
 
-## Legacy Telemetry Issues
+## Claude Code Adapter & Telemetry Issues
 
 ### Telemetry Not Working
 
@@ -163,24 +166,25 @@ npm install -g @anthropic-ai/claude-code
    - Remove "Switch focus to Editor" shortcut
    - This fixes ESC key not working
 
-## Common Metric Collection Issues
+## Muninn Platform Metric Collection Issues
 
 ### No Metrics in Prometheus
 
-**Problem**: Prometheus shows no data despite telemetry being enabled.
+**Problem**: Prometheus shows no data despite Claude Code adapter setup.
 
 **Solutions**:
-1. Check docker containers are running:
+1. Check Muninn docker containers are running:
    ```bash
+   # From infrastructure/ directory
    docker-compose ps
    ```
 
-2. Verify Prometheus can reach the OTEL collector:
+2. Verify Prometheus can reach the Pushgateway:
    ```bash
    curl http://localhost:7101/metrics
    ```
 
-3. Check for firewall issues blocking port 4317
+3. Check for firewall issues blocking port 4317 (OTEL) or 7101 (Pushgateway)
 
 ### Incorrect Cost Calculations
 
@@ -195,21 +199,29 @@ npm install -g @anthropic-ai/claude-code
 
 If these solutions don't resolve your issue:
 
-1. Run diagnostics:
+**For Claude Code Issues:**
+1. Run Claude Code diagnostics:
    ```bash
    claude /doctor
    ```
 
-2. Report bugs:
+2. Report Claude Code bugs:
    ```bash
    claude /bug
    ```
 
-3. Check the official documentation:
+3. Check Claude Code documentation:
    - [Claude Code Troubleshooting](https://docs.anthropic.com/en/docs/claude-code/troubleshooting)
    - [Claude Code GitHub Issues](https://github.com/anthropics/claude-code/issues)
 
-4. For telemetry-specific issues:
-   - Review your OTEL collector logs
+**For Muninn Platform Issues:**
+1. Check Muninn documentation:
+   - **[Claude Adapter Guide](adapters/claude/README.md#troubleshooting)** - Claude-specific troubleshooting
+   - **[Justfile Guide](JUSTFILE-GUIDE.md#error-handling)** - Service management troubleshooting
+   - **[Metrics Reference](METRICS-REFERENCE.md)** - Understanding metrics and queries
+
+2. For Muninn telemetry issues:
+   - Review OTEL collector logs: `just service logs otel-collector`
    - Check Prometheus targets at http://localhost:7100/targets
-   - Verify your organization's firewall rules
+   - Verify service health: `just monitor validate`
+   - Check firewall rules for ports 7100-7112
