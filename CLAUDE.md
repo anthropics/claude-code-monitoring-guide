@@ -35,7 +35,11 @@ OpenTelemetry Collector  (otel-collector-config.yaml)
                     ▲
                 Grafana (:3000) — auto-provisioned dashboards
                     │
-                    └─ render ──▶ Image Renderer (:8081)
+                    ├─ render ──▶ Image Renderer (:8081)
+                    └─ lifecycle ──▶ DuckDB API (:8082)
+
+Claude Code Hooks (lifecycle-logger.sh)
+  └─ events.jsonl ──▶ DuckDB API (:8082) ──▶ Grafana Infinity DS
 ```
 
 **Key data flow**: Claude Code attaches a `prompt_id` (UUID v4) to every event, enabling end-to-end tracing from `user_prompt → api_request → tool_result`.
@@ -65,6 +69,7 @@ Access Grafana at `http://localhost:3000` (admin/admin). Dashboards are auto-pro
 | ROI & Productivity | `claude-code-roi-productivity` | Cost per commit/PR/LOC, cache efficiency, user productivity |
 | Adoption & Usage Patterns | `claude-code-adoption-usage` | DAU/WAU/MAU, terminal/IDE distribution |
 | Trace Explorer | `claude-code-trace-explorer` | TTFT, tool execution breakdown, permission wait time (Enhanced Telemetry Beta) |
+| Lifecycle Observability | `claude-code-lifecycle` | Per-session skill/command/agent usage (DuckDB + Hooks) |
 
 ## Verifying Data Collection
 
@@ -135,4 +140,41 @@ Requires `CLAUDE_CODE_ENHANCED_TELEMETRY_BETA=1`. These spans are sent to Tempo 
 
 # Slow LLM requests (> 10s)
 {resource.service.name="claude-code" && name="claude_code.llm_request" && duration > 10s}
+```
+
+## Lifecycle Observability (DuckDB + Hooks)
+
+Hook-based tracking of session lifecycle events. Data flows:
+`Claude Code hooks → JSONL (data/lifecycle/events.jsonl) → DuckDB API (:8082) → Grafana`
+
+### Tracked Events
+
+| Event | Hook | Captured Data |
+|---|---|---|
+| Session start/end | SessionStart, SessionEnd | source, model, cwd |
+| Skill invocations | PreToolUse[Skill] | skill_name, args |
+| Agent spawns | PreToolUse[Agent], SubagentStart/Stop | agent_type, model, transcript |
+| User prompts | UserPromptSubmit | prompt text, `/command` detection |
+
+### DuckDB API Endpoints (localhost:8082)
+
+| Endpoint | Purpose |
+|---|---|
+| `GET /api/stats` | Overall statistics |
+| `GET /api/sessions` | Session summaries with skill/agent/command counts |
+| `GET /api/skills` | Skill usage aggregation |
+| `GET /api/commands` | Slash-command usage |
+| `GET /api/agents` | Agent type distribution |
+| `GET /api/timeline?session_id=X` | All events for a session |
+| `POST /api/query` | Arbitrary SELECT queries |
+
+### Verifying Lifecycle Data
+
+```bash
+# Check events are being written
+tail -f data/lifecycle/events.jsonl | jq .
+
+# Check DuckDB API
+curl http://localhost:8082/api/stats | jq .
+curl http://localhost:8082/api/sessions | jq .
 ```

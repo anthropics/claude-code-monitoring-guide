@@ -55,6 +55,20 @@ services:
       - "3200:3200"   # Tempo HTTP API
       - "4317"        # OTLP gRPC (内部用)
 
+  # DuckDB API for lifecycle observability
+  duckdb-api:
+    build: ./duckdb-api
+    container_name: duckdb-api
+    ports:
+      - "8082:8082"
+    volumes:
+      - ./data/lifecycle:/data/lifecycle
+    healthcheck:
+      test: ["CMD", "duckdb-api", "-healthcheck"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
   # Grafana
   grafana:
     image: grafana/grafana:latest
@@ -66,6 +80,7 @@ services:
       - GF_RENDERING_SERVER_URL=http://renderer:8081/render
       - GF_RENDERING_CALLBACK_URL=http://grafana:3000/
       - GF_LOG_FILTERS=rendering:debug
+      - GF_INSTALL_PLUGINS=yesoreyeram-infinity-datasource
     volumes:
       - grafana_data:/var/lib/grafana
       - ./grafana/provisioning:/etc/grafana/provisioning
@@ -74,6 +89,7 @@ services:
       - prometheus
       - loki
       - tempo
+      - duckdb-api
 
   # Grafana Image Renderer (remote rendering service)
   renderer:

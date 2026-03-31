@@ -18,3 +18,9 @@ datasources:
     uid: tempo-datasource
     jsonData:
       grpcAddress: tempo:9095
+  - name: DuckDB-Lifecycle
+    type: yesoreyeram-infinity-datasource
+    access: proxy
+    uid: duckdb-lifecycle
+    jsonData:
+      url: http://duckdb-api:8082
