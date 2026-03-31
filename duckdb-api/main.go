@@ -50,6 +50,8 @@ func main() {
 	mux.HandleFunc("GET /api/skills", makeHandler(db, handleSkills))
 	mux.HandleFunc("GET /api/commands", makeHandler(db, handleCommands))
 	mux.HandleFunc("GET /api/agents", makeHandler(db, handleAgents))
+	mux.HandleFunc("GET /api/models", makeHandler(db, handleModels))
+	mux.HandleFunc("GET /api/projects", makeHandler(db, handleProjects))
 	mux.HandleFunc("GET /api/timeline", makeHandler(db, handleTimeline))
 	mux.HandleFunc("POST /api/query", makeHandler(db, handleQuery))
 
@@ -256,7 +258,27 @@ func handleSkills(db *DB, w http.ResponseWriter, r *http.Request) {
 }
 
 func handleCommands(db *DB, w http.ResponseWriter, r *http.Request) {
+	groupBy := r.URL.Query().Get("group_by")
 	clause, args := sessionFilter(r)
+
+	if groupBy == "day" {
+		rows, err := db.Query(`
+			SELECT
+				CAST(event_timestamp AS DATE) AS date,
+				COUNT(*) AS invocation_count
+			FROM lifecycle_events
+			WHERE event_type = 'user_prompt' AND detected_command IS NOT NULL`+clause+`
+			GROUP BY CAST(event_timestamp AS DATE)
+			ORDER BY date
+		`, args...)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		writeJSON(w, rows)
+		return
+	}
+
 	rows, err := db.Query(`
 		SELECT
 			detected_command AS command_name,
@@ -275,7 +297,27 @@ func handleCommands(db *DB, w http.ResponseWriter, r *http.Request) {
 }
 
 func handleAgents(db *DB, w http.ResponseWriter, r *http.Request) {
+	groupBy := r.URL.Query().Get("group_by")
 	clause, args := sessionFilter(r)
+
+	if groupBy == "day" {
+		rows, err := db.Query(`
+			SELECT
+				CAST(event_timestamp AS DATE) AS date,
+				COUNT(*) AS spawn_count
+			FROM lifecycle_events
+			WHERE event_type IN ('agent_start', 'agent_invoke')`+clause+`
+			GROUP BY CAST(event_timestamp AS DATE)
+			ORDER BY date
+		`, args...)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		writeJSON(w, rows)
+		return
+	}
+
 	rows, err := db.Query(`
 		SELECT
 			agent_type,
@@ -286,6 +328,49 @@ func handleAgents(db *DB, w http.ResponseWriter, r *http.Request) {
 		GROUP BY agent_type
 		ORDER BY spawn_count DESC
 	`, args...)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, rows)
+}
+
+func handleModels(db *DB, w http.ResponseWriter, r *http.Request) {
+	rows, err := db.Query(`
+		SELECT
+			model,
+			COUNT(*) AS session_count,
+			MIN(event_timestamp) AS first_seen,
+			MAX(event_timestamp) AS last_seen
+		FROM lifecycle_events
+		WHERE event_type = 'session_start' AND model IS NOT NULL
+		GROUP BY model
+		ORDER BY session_count DESC
+	`)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, rows)
+}
+
+func handleProjects(db *DB, w http.ResponseWriter, r *http.Request) {
+	rows, err := db.Query(`
+		WITH session_cwds AS (
+			SELECT session_id, cwd
+			FROM lifecycle_events
+			WHERE event_type = 'session_start' AND cwd IS NOT NULL
+		)
+		SELECT
+			sc.cwd AS project_path,
+			COUNT(DISTINCT sc.session_id) AS session_count,
+			COALESCE(SUM(CASE WHEN e.event_type = 'skill_invoke' THEN 1 ELSE 0 END), 0) AS skill_count,
+			COALESCE(SUM(CASE WHEN e.event_type IN ('agent_start', 'agent_invoke') THEN 1 ELSE 0 END), 0) AS agent_count
+		FROM session_cwds sc
+		LEFT JOIN lifecycle_events e ON sc.session_id = e.session_id
+		GROUP BY sc.cwd
+		ORDER BY session_count DESC
+	`)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return

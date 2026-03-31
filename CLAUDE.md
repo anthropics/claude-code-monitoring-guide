@@ -70,6 +70,7 @@ Access Grafana at `http://localhost:3000` (admin/admin). Dashboards are auto-pro
 | Adoption & Usage Patterns | `claude-code-adoption-usage` | DAU/WAU/MAU, terminal/IDE distribution |
 | Trace Explorer | `claude-code-trace-explorer` | TTFT, tool execution breakdown, permission wait time (Enhanced Telemetry Beta) |
 | Lifecycle Observability | `claude-code-lifecycle` | Per-session skill/command/agent usage (DuckDB + Hooks) |
+| Global Usage Tracking | `claude-code-global-usage` | Cross-session skill/command/agent trends, model & project analysis (DuckDB) |
 
 ## Verifying Data Collection
 
@@ -165,6 +166,8 @@ Hook-based tracking of session lifecycle events. Data flows:
 | `GET /api/skills` | Skill usage aggregation |
 | `GET /api/commands` | Slash-command usage |
 | `GET /api/agents` | Agent type distribution |
+| `GET /api/models` | Model usage distribution |
+| `GET /api/projects` | Project (cwd) usage with skill/agent counts |
 | `GET /api/timeline?session_id=X` | All events for a session |
 | `POST /api/query` | Arbitrary SELECT queries |
 
