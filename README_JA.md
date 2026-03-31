@@ -302,6 +302,24 @@ Enhanced Telemetry Beta のトレーススパンを探索するダッシュボ�
 | Session List | Table | 全セッション一覧（モデル・プロンプト数・スキル/エージェント/コマンド数）。session_id クリックでドリルダウン |
 | Session Event Timeline | Table | セッション内の全ライフサイクルイベントを時系列表示 |
 
+---
+
+### Global Usage Tracking
+
+**UID**: `claude-code-global-usage`
+
+全セッション横断でのスキル・コマンド・エージェント使用トレンドを追跡するダッシュボード。モデル別・プロジェクト別の分析も可能。
+
+**パネル構成**:
+
+| パネル | タイプ | 内容 |
+|---|---|---|
+| Total Sessions / Skill Invocations / Agent Spawns / Commands / Unique Skills / Unique Agent Types | Stat | グローバル KPI カード（セッションフィルタなし） |
+| Daily Sessions / Daily Skill Invocations / Daily Agent Spawns | Time series (bar) | 日別の利用トレンド |
+| Top Skills / Top Commands / Top Agent Types | Bar chart | 全セッション横断の使用ランキング |
+| Model Usage | Bar chart | モデル別セッション数 |
+| Top Projects | Table | プロジェクト（作業ディレクトリ）別のセッション・スキル・エージェント数 |
+
 ## トレーススパン (Enhanced Telemetry Beta)
 
 `CLAUDE_CODE_ENHANCED_TELEMETRY_BETA=1` が必要。スパンは OTLP 経由で Tempo に送信されます。
@@ -334,7 +352,8 @@ Enhanced Telemetry Beta のトレーススパンを探索するダッシュボ�
 │   │   ├── roi-productivity.json   # ROI & Productivity ダッシュボード
 │   │   ├── adoption-usage.json     # Adoption & Usage Patterns ダッシュボード
 │   │   ├── trace-explorer.json    # Trace Explorer ダッシュボード (Enhanced Telemetry Beta)
-│   │   └── lifecycle-observability.json # Lifecycle Observability ダッシュボード (DuckDB + Hooks)
+│   │   ├── lifecycle-observability.json # Lifecycle Observability ダッシュボード (DuckDB + Hooks)
+│   │   └── global-usage.json          # Global Usage Tracking ダッシュボード (DuckDB)
 │   └── provisioning/
 │       ├── dashboards/
 │       │   └── dashboards.yaml     # ダッシュボード自動プロビジョニング設定

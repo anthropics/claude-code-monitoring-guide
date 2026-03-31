@@ -302,6 +302,24 @@ Dashboard for tracking which skills, commands, and agents are used per Claude Co
 | Session List | Table | All sessions with model, prompt/skill/agent/command counts. Click session_id to drill down |
 | Session Event Timeline | Table | All lifecycle events for a session in chronological order |
 
+---
+
+### Global Usage Tracking
+
+**UID**: `claude-code-global-usage`
+
+Dashboard for tracking cross-session skill, command, and agent usage trends across all Claude Code sessions. Includes model and project-level analysis.
+
+**Panels**:
+
+| Panel | Type | Description |
+|---|---|---|
+| Total Sessions / Skill Invocations / Agent Spawns / Commands / Unique Skills / Unique Agent Types | Stat | Global KPI cards (no session filter) |
+| Daily Sessions / Daily Skill Invocations / Daily Agent Spawns | Time series (bar) | Usage trends over time |
+| Top Skills / Top Commands / Top Agent Types | Bar chart | Cross-session usage rankings |
+| Model Usage | Bar chart | Session count by LLM model |
+| Top Projects | Table | Session/skill/agent counts per working directory |
+
 ## Trace Spans (Enhanced Telemetry Beta)
 
 Requires `CLAUDE_CODE_ENHANCED_TELEMETRY_BETA=1`. These spans are sent to Tempo via OTLP.
@@ -334,7 +352,8 @@ Requires `CLAUDE_CODE_ENHANCED_TELEMETRY_BETA=1`. These spans are sent to Tempo 
 │   │   ├── roi-productivity.json   # ROI & Productivity dashboard
 │   │   ├── adoption-usage.json     # Adoption & Usage Patterns dashboard
 │   │   ├── trace-explorer.json    # Trace Explorer dashboard (Enhanced Telemetry Beta)
-│   │   └── lifecycle-observability.json # Lifecycle Observability dashboard (DuckDB + Hooks)
+│   │   ├── lifecycle-observability.json # Lifecycle Observability dashboard (DuckDB + Hooks)
+│   │   └── global-usage.json          # Global Usage Tracking dashboard (DuckDB)
 │   └── provisioning/
 │       ├── dashboards/
 │       │   └── dashboards.yaml     # Dashboard auto-provisioning config
