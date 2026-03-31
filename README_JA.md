@@ -16,6 +16,11 @@ OpenTelemetry Collector
   └─ traces  ──▶ Tempo (:3200)
                     ▲
                 Grafana (:3000) ─ 全データソースを横断可視化
+                    │
+                    └─ lifecycle ──▶ DuckDB API (:8082)
+
+Claude Code Hooks (lifecycle-logger.sh)
+  └─ events.jsonl ──▶ DuckDB API (:8082) ──▶ Grafana Infinity DS
 ```
 
 Claude Code は `prompt.id`（UUID v4）をすべてのイベントに付与して送信します。この ID をキーに `user_prompt → api_request → tool_result` の処理フロー全体をトレースできます。
@@ -44,6 +49,7 @@ docker compose up -d
 | Loki | 3100 | ログ/イベント保存 |
 | Tempo | 3200 | トレース保存 |
 | Grafana | 3000 | 可視化 (admin/admin) |
+| DuckDB API | 8082 | ライフサイクルイベント保存・クエリ (Go + DuckDB) |
 
 ### 2. Claude Code のテレメトリ設定
 
@@ -272,6 +278,30 @@ Enhanced Telemetry Beta のトレーススパンを探索するダッシュボ�
 | Tool Execution Details | Table | 最近のツール実行スパン（実行時間・成否・エラー） |
 | Recent Interaction Traces | Table | 最近のインタラクショントレース — traceID クリックでウォーターフォール表示 |
 
+---
+
+### Lifecycle Observability
+
+**UID**: `claude-code-lifecycle`
+
+セッション単位でどのスキル・コマンド・エージェントが使用されたかを追跡するダッシュボード。DuckDB + Claude Code Hooks で実現。
+
+**使い方**:
+1. 全セッションの概要統計と使用内訳を確認
+2. Session List で `session_id` をクリックしてドリルダウン
+3. Session Event Timeline でセッション内の全ライフサイクルイベントを時系列で確認
+
+**パネル構成**:
+
+| パネル | タイプ | 内容 |
+|---|---|---|
+| Total Sessions / Skill Invocations / Agent Spawns / Command Invocations / Unique Skills / Unique Agent Types | Stat | 概要 KPI カード — session_id でフィルタ可能 |
+| Top Skills by Usage | Bar chart | スキル呼び出し回数ランキング（commit, review 等） |
+| Command Distribution | Bar chart | スラッシュコマンドの使用回数（UserPromptSubmit で検出） |
+| Agent Types | Bar chart | エージェントタイプ別スポーン数（Explore, Plan, general-purpose） |
+| Session List | Table | 全セッション一覧（モデル・プロンプト数・スキル/エージェント/コマンド数）。session_id クリックでドリルダウン |
+| Session Event Timeline | Table | セッション内の全ライフサイクルイベントを時系列表示 |
+
 ## トレーススパン (Enhanced Telemetry Beta)
 
 `CLAUDE_CODE_ENHANCED_TELEMETRY_BETA=1` が必要。スパンは OTLP 経由で Tempo に送信されます。
@@ -303,12 +333,21 @@ Enhanced Telemetry Beta のトレーススパンを探索するダッシュボ�
 │   │   ├── working-dashboard.json  # 基本メトリクスダッシュボード
 │   │   ├── roi-productivity.json   # ROI & Productivity ダッシュボード
 │   │   ├── adoption-usage.json     # Adoption & Usage Patterns ダッシュボード
-│   │   └── trace-explorer.json    # Trace Explorer ダッシュボード (Enhanced Telemetry Beta)
+│   │   ├── trace-explorer.json    # Trace Explorer ダッシュボード (Enhanced Telemetry Beta)
+│   │   └── lifecycle-observability.json # Lifecycle Observability ダッシュボード (DuckDB + Hooks)
 │   └── provisioning/
 │       ├── dashboards/
 │       │   └── dashboards.yaml     # ダッシュボード自動プロビジョニング設定
 │       └── datasources/
-│           └── datasources.yaml    # データソース設定（Prometheus/Loki/Tempo）
+│           └── datasources.yaml    # データソース設定（Prometheus/Loki/Tempo/DuckDB）
+├── duckdb-api/
+│   ├── Dockerfile                  # Go マルチステージビルド
+│   ├── main.go                     # HTTP サーバー + API ハンドラ
+│   ├── db.go                       # DuckDB 接続管理 + JSONL インポーター
+│   ├── schema.sql                  # DuckDB テーブル定義
+│   └── go.mod / go.sum             # Go モジュール依存
+├── hooks/
+│   └── lifecycle-logger.sh         # ライフサイクルイベント記録用 Hook スクリプト
 ├── claude_code_roi_full.md         # ROI 計測の詳細ガイド
 ├── troubleshooting.md              # トラブルシューティング
 └── report-generation-prompt.md    # 自動レポート生成プロンプトテンプレート

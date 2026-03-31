@@ -16,6 +16,11 @@ OpenTelemetry Collector
   └─ traces  ──▶ Tempo (:3200)
                     ▲
                 Grafana (:3000) ─ unified visualization across all data sources
+                    │
+                    └─ lifecycle ──▶ DuckDB API (:8082)
+
+Claude Code Hooks (lifecycle-logger.sh)
+  └─ events.jsonl ──▶ DuckDB API (:8082) ──▶ Grafana Infinity DS
 ```
 
 Claude Code attaches a `prompt.id` (UUID v4) to every event. This ID is the key to tracing the entire processing flow from `user_prompt → api_request → tool_result`.
@@ -44,6 +49,7 @@ Services started:
 | Loki | 3100 | Log/event storage |
 | Tempo | 3200 | Trace storage |
 | Grafana | 3000 | Visualization (admin/admin) |
+| DuckDB API | 8082 | Lifecycle event storage & query (Go + DuckDB) |
 
 ### 2. Configure Claude Code Telemetry
 
@@ -272,6 +278,30 @@ Dashboard for exploring Enhanced Telemetry Beta trace spans including TTFT, tool
 | Tool Execution Details | Table | Recent tool execution spans with duration/success/error |
 | Recent Interaction Traces | Table | Recent interaction traces — click traceID for waterfall view |
 
+---
+
+### Lifecycle Observability
+
+**UID**: `claude-code-lifecycle`
+
+Dashboard for tracking which skills, commands, and agents are used per Claude Code session. Powered by DuckDB + Claude Code Hooks.
+
+**How to use**:
+1. View overview stats and usage breakdown across all sessions
+2. Click a `session_id` in the Session List to drill down
+3. Review the Session Event Timeline showing the full lifecycle
+
+**Panels**:
+
+| Panel | Type | Description |
+|---|---|---|
+| Total Sessions / Skill Invocations / Agent Spawns / Command Invocations / Unique Skills / Unique Agent Types | Stat | Overview KPI cards — filterable by session_id |
+| Top Skills by Usage | Bar chart | Skill invocation count ranking (e.g., commit, review) |
+| Command Distribution | Bar chart | Slash-command usage (detected from UserPromptSubmit) |
+| Agent Types | Bar chart | Agent type spawn count (Explore, Plan, general-purpose) |
+| Session List | Table | All sessions with model, prompt/skill/agent/command counts. Click session_id to drill down |
+| Session Event Timeline | Table | All lifecycle events for a session in chronological order |
+
 ## Trace Spans (Enhanced Telemetry Beta)
 
 Requires `CLAUDE_CODE_ENHANCED_TELEMETRY_BETA=1`. These spans are sent to Tempo via OTLP.
@@ -303,12 +333,21 @@ Requires `CLAUDE_CODE_ENHANCED_TELEMETRY_BETA=1`. These spans are sent to Tempo 
 │   │   ├── working-dashboard.json  # Basic metrics dashboard
 │   │   ├── roi-productivity.json   # ROI & Productivity dashboard
 │   │   ├── adoption-usage.json     # Adoption & Usage Patterns dashboard
-│   │   └── trace-explorer.json    # Trace Explorer dashboard (Enhanced Telemetry Beta)
+│   │   ├── trace-explorer.json    # Trace Explorer dashboard (Enhanced Telemetry Beta)
+│   │   └── lifecycle-observability.json # Lifecycle Observability dashboard (DuckDB + Hooks)
 │   └── provisioning/
 │       ├── dashboards/
 │       │   └── dashboards.yaml     # Dashboard auto-provisioning config
 │       └── datasources/
-│           └── datasources.yaml    # Data source config (Prometheus/Loki/Tempo)
+│           └── datasources.yaml    # Data source config (Prometheus/Loki/Tempo/DuckDB)
+├── duckdb-api/
+│   ├── Dockerfile                  # Go multi-stage build
+│   ├── main.go                     # HTTP server + API handlers
+│   ├── db.go                       # DuckDB connection + JSONL importer
+│   ├── schema.sql                  # DuckDB table definitions
+│   └── go.mod / go.sum             # Go module dependencies
+├── hooks/
+│   └── lifecycle-logger.sh         # Hook script for lifecycle event capture
 ├── claude_code_roi_full.md         # Detailed ROI measurement guide
 ├── troubleshooting.md              # Troubleshooting
 └── report-generation-prompt.md    # Automated report generation prompt template
