@@ -2,7 +2,7 @@ model_list:
   - model_name: "bedrock/*"
     litellm_params:
       model: "bedrock/*"
-
+      custom_llm_provider: bedrock  
 general_settings:
   master_key: "sk-litellm-master-key"
 
