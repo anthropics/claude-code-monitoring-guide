@@ -44,6 +44,49 @@ services:
     depends_on:
       - prometheus
 
+  # LiteLLM Database
+  litellm-db:
+    image: postgres:16-alpine
+    container_name: litellm-db
+    environment:
+      POSTGRES_DB: litellm
+      POSTGRES_USER: litellm
+      POSTGRES_PASSWORD: litellm
+    volumes:
+      - litellm_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U litellm"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # LiteLLM Proxy
+  litellm:
+    build:
+      context: .
+      dockerfile: litellm.Dockerfile
+      additional_contexts:
+        host-aws-config: ${HOME}/.aws
+    container_name: litellm
+    ports:
+      - "4000:4000"
+    volumes:
+      - ./litellm_config.yaml:/app/config.yaml
+    environment:
+      - AWS_PROFILE=aws-ai-lab-user-610981309775
+      - AWS_REGION=us-east-1
+      - DATABASE_URL=postgresql://litellm:litellm@litellm-db:5432/litellm
+    depends_on:
+      litellm-db:
+        condition: service_healthy
+    command:
+      - "--config"
+      - "/app/config.yaml"
+      - "--port"
+      - "4000"
+      - "--detailed_debug"
+
 volumes:
   prometheus_data:
   grafana_data:
+  litellm_db_data:
