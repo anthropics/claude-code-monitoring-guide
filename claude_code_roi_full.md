@@ -88,6 +88,20 @@ Common infrastructure endpoints:
 - **DataDog**: `https://otlp.datadoghq.com`
 - **Honeycomb**: `https://api.honeycomb.io:443`
 
+### Local Session Audit Option
+
+If you want a quick local audit before wiring up Prometheus, [agenttrace](https://github.com/luoyuctl/agenttrace) can summarize Claude Code session logs from your machine. It is useful for individual developers or early pilots that need token, cost, latency, tool failure, and session health reports without sending prompts or source code to a hosted service.
+
+```bash
+# Open a local terminal dashboard
+agenttrace
+
+# Export a machine-readable overview for review or CI artifacts
+agenttrace --overview -f json
+```
+
+This does not replace OpenTelemetry for organization-wide measurement, but it gives teams a low-friction way to identify expensive or unhealthy sessions before they invest in a shared metrics pipeline.
+
 ### Key Prometheus Queries
 
 Once data is flowing, these queries give you the insights you need:
