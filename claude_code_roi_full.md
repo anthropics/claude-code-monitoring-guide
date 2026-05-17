@@ -93,10 +93,16 @@ Common infrastructure endpoints:
 If you want a quick local audit before wiring up Prometheus, [agenttrace](https://github.com/luoyuctl/agenttrace) can summarize Claude Code session logs from your machine. It is useful for individual developers or early pilots that need token, cost, latency, tool failure, and session health reports without sending prompts or source code to a hosted service.
 
 ```bash
+# Install the local CLI
+curl -sL https://raw.githubusercontent.com/luoyuctl/agenttrace/master/install.sh | sh
+
+# Check which Claude Code logs are available locally
+agenttrace --doctor
+
 # Open a local terminal dashboard
 agenttrace
 
-# Export a machine-readable overview for review or CI artifacts
+# Export machine-readable evidence for review or CI artifacts
 agenttrace --overview -f json
 ```
 
