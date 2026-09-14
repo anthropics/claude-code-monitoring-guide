@@ -505,25 +505,27 @@ Rolling out telemetry across your organization is straightforward with managed s
 
 ### Managed Settings Configuration
 
-Create a `managed-settings.json` file:
+Create a `managed-settings.json` file using the `env` object to define the
+OpenTelemetry environment variables:
 
 ```json
 {
-  "telemetry": {
-    "enabled": true,
-    "endpoint": "https://your-otel-collector.company.com:4317",
-    "headers": {
-      "Authorization": "Bearer ${OTEL_TOKEN}"
-    }
-  },
-  "exporters": {
-    "metrics": "otlp",
-    "logs": "otlp"
+  "env": {
+    "CLAUDE_CODE_ENABLE_TELEMETRY": "1",
+    "OTEL_METRICS_EXPORTER": "otlp",
+    "OTEL_LOGS_EXPORTER": "otlp",
+    "OTEL_EXPORTER_OTLP_PROTOCOL": "grpc",
+    "OTEL_EXPORTER_OTLP_ENDPOINT": "https://your-otel-collector.company.com:4317",
+    "OTEL_EXPORTER_OTLP_HEADERS": "Authorization=Bearer ${OTEL_TOKEN}"
   }
 }
 ```
 
-Deploy via your MDM solution or configuration management tool. Users can't disable telemetry, ensuring consistent data collection.
+Deploy via your MDM solution or configuration management tool. Environment
+variables in managed settings have high precedence and cannot be overridden by
+users, ensuring consistent data collection. For the complete list of supported
+variables and deployment details, see the [Claude Code monitoring
+documentation](https://code.claude.com/docs/en/monitoring-usage#administrator-configuration).
 
 For detailed deployment options, see the [Claude Code deployment documentation](https://docs.anthropic.com/en/docs/claude-code/third-party-integrations).
 
