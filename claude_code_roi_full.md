@@ -60,6 +60,7 @@ First, grab the configuration files:
 ```bash
 # Clone the configuration repo
 git clone https://github.com/katchu11/claude-code-guide
+cd claude-code-guide
 docker-compose up -d
 ```
 
