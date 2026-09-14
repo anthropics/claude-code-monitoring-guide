@@ -137,6 +137,31 @@ npm install -g @anthropic-ai/claude-code
 
 ## Common Metric Collection Issues
 
+### Commit or Pull Request Counters Stay at Zero
+
+`claude_code.commit.count` and `claude_code.pull_request.count` are scoped to
+actions Claude Code performs in the current instrumented session. They do not
+replay repository history, and they do not count commits or pull requests made
+by a developer, CI, or another automation outside that session. The pull
+request counter also measures creation of a new pull or merge request, not
+updates to an existing one.
+
+To verify the trigger independently of Prometheus or Grafana, use the console
+exporter with a short interval:
+
+```bash
+export CLAUDE_CODE_ENABLE_TELEMETRY=1
+export OTEL_METRICS_EXPORTER=console
+export OTEL_METRIC_EXPORT_INTERVAL=1000
+claude
+```
+
+Ask Claude Code to create a commit or a new pull/merge request, then wait for a
+metric export. If the counter is still absent, check that the operation was
+actually executed by Claude Code and that the session is using the expected
+Claude Code version. For the exact trigger definitions, see the [official
+monitoring documentation](https://code.claude.com/docs/en/monitoring-usage#metric-details).
+
 ### No Metrics in Prometheus
 
 **Problem**: Prometheus shows no data despite telemetry being enabled.

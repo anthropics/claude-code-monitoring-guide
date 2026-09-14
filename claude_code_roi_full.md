@@ -204,6 +204,36 @@ Measuring developer productivity isn't straightforward, but Claude Code provides
 | `claude_code.commit.count` | Commits made with Claude assistance | **Medium reliability** - Varies by team commit practices; some teams commit frequently, others in large batches |
 | `claude_code.lines_of_code.count` | Code additions/modifications | **Low reliability** - Lines of code can be misleading; refactoring may reduce LOC while improving quality |
 
+### When Commit and Pull Request Counters Increment
+
+These counters measure actions taken by Claude Code during an instrumented
+session. They are not repository-wide Git or GitHub event counters:
+
+- `claude_code.commit.count` increments when Claude Code creates a Git commit.
+- `claude_code.pull_request.count` increments when Claude Code creates a pull
+  request or merge request through a shell command or an MCP tool.
+
+A commit or pull request created by a developer's regular terminal, a CI job,
+or another automation is outside the scope of these session metrics. Updating
+an existing pull request also does not create a new pull-request event. If you
+need a complete repository history, combine these metrics with Git or provider
+data rather than treating a zero value as proof that no repository activity
+occurred.
+
+For a focused smoke test, enable the console exporter and shorten the export
+interval before starting Claude Code:
+
+```bash
+export CLAUDE_CODE_ENABLE_TELEMETRY=1
+export OTEL_METRICS_EXPORTER=console
+export OTEL_METRIC_EXPORT_INTERVAL=1000
+claude
+```
+
+Then ask Claude Code to create a commit or a new pull request and wait for the
+next metric export. The trigger definitions follow the [official monitoring
+documentation](https://code.claude.com/docs/en/monitoring-usage#metric-details).
+
 ### Additional Available Metrics
 
 Claude Code provides these additional telemetry metrics:
