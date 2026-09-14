@@ -22,10 +22,16 @@ Quick solutions for common Claude Code issues related to telemetry and ROI measu
    ```
    You should see metric output in the console.
 
-3. Check your OTLP endpoint is accessible:
+3. Check the collector's OTLP HTTP receiver is accessible with an empty metrics request:
    ```bash
-   curl -v http://localhost:4317
+   curl -i http://localhost:4318/v1/metrics \
+     -H 'Content-Type: application/json' \
+     --data '{}'
    ```
+   Expect an HTTP 200 response. The supplied Compose configuration exposes
+   OTLP HTTP on port 4318 and OTLP gRPC on port 4317; a plain HTTP GET to the
+   gRPC port is not a valid OTLP health check. This checks the HTTP receiver,
+   not whether Claude Code is exporting metrics.
 
 4. Verify all required environment variables:
    ```bash
@@ -147,10 +153,13 @@ npm install -g @anthropic-ai/claude-code
    docker-compose ps
    ```
 
-2. Verify Prometheus can reach the OTEL collector:
+2. Check the collector's exported application metrics from the host:
    ```bash
-   curl http://localhost:8888/metrics
+   curl http://localhost:8889/metrics
    ```
+   Port 8889 is the Prometheus exporter exposed by `docker-compose.yml` and
+   `otel-collector-config.yaml`. Check http://localhost:9090/targets to verify
+   that Prometheus itself can scrape `otel-collector:8889`.
 
 3. Check for firewall issues blocking port 4317
 
