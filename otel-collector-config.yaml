@@ -17,7 +17,8 @@ processors:
 exporters:
   prometheus:
     endpoint: "0.0.0.0:8889"
-    send_timestamps: true
+    # Let Prometheus timestamp each scrape of the retained metrics.
+    send_timestamps: false
     metric_expiration: 180m
     enable_open_metrics: true
     

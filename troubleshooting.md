@@ -154,6 +154,19 @@ npm install -g @anthropic-ai/claude-code
 
 3. Check for firewall issues blocking port 4317
 
+### Metrics Disappear While the Collector Still Exposes Them
+
+If `/metrics` contains Claude Code metrics but Prometheus or Grafana shows no
+current samples, check `exporters.prometheus.send_timestamps` in
+`otel-collector-config.yaml`. Keep it `false` so Prometheus uses scrape time.
+With explicit source timestamps, retained samples can fall outside Prometheus's
+default five-minute query lookback even while the collector still exposes them
+for its configured `metric_expiration` period.
+
+After changing the collector configuration, restart it with
+`docker compose restart otel-collector` and wait for the next scrape. This affects
+new samples; it does not repair historical gaps.
+
 ### Incorrect Cost Calculations
 
 **Problem**: Cost metrics don't match expected values.
